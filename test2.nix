@@ -1,10 +1,14 @@
 {
 webserver =
-{ modulesPath, config, lib, pkgs, ... }: {
+{ modulesPath, config, lib, pkgs, ... }: let
+  test = pkgs.writeTextDir "index.php" ''
+    <?php
+    phpinfo();
+  '';
+in {
   imports = [ "${modulesPath}/virtualisation/amazon-image.nix" ];
   ec2.hvm = true;
 
-  #services.nginx.enable = true;
   networking.firewall.allowedTCPPorts = [ 80 ];
   services.phpfpm.pools.test = {
     user = "test";
@@ -25,7 +29,7 @@ webserver =
   services.nginx = {
     enable = true;
     virtualHosts.test.locations."/" = {
-      root = "/test";
+      root = test;
       extraConfig = ''
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
         fastcgi_pass unix:${config.services.phpfpm.pools.test.socket};
@@ -37,7 +41,7 @@ webserver =
   users.users.test = {
     isSystemUser = true;
     createHome = true;
-    home = "/test";
+    home = test;
     group  = "test";
   };
   users.groups.test = {};
